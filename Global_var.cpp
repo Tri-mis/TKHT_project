@@ -32,3 +32,7 @@ String uid;
 String path = "";
 bool firebase_setup_done = false;
 
+bool enable_logging = false;
+bool alert_is_set = false;
+bool user_want_to_change_wifi = false;
+

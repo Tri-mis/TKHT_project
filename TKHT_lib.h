@@ -68,6 +68,10 @@ extern FirebaseConfig config;
 extern String path;
 extern bool firebase_setup_done;
 
+extern bool enable_logging;
+extern bool alert_is_set;
+extern bool user_want_to_change_wifi;
+
 
 //============================================================== FUNCTION DECORATION ==============================================================//
 bool loadWiFiCredentials();
@@ -80,6 +84,24 @@ String getFormattedTime();
 void checkSensorData();
 void setupFirebase();
 void to_database(const String &folder, void *data);
+
+//============================================================== FUNCTION DECORATION ==============================================================//
+template <typename... Args>
+void logMessage(Args... args);
+bool load_wifi_credentials();
+void save_wifi_credentials();
+bool connect_to_wifi();
+void connect_to_firebase();
+void refresh_firebase_token();
+void get_config_data_from_firebase();
+String get_formatted_time();
+void send_data_to_firebase();
+void disconnect_if_allowed();
+void read_sensor_data();
+void check_sensor_data_to_send_alert();
+void take_wifi_credential_from_user_input();
+
+
 
 
 // Define tasks
