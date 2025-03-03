@@ -34,56 +34,51 @@ class SensorData{
     float temperature = 0;
     float maxHumidity = 100;
     float minHumidity = 0;
-    float maxTemperature = 33;
+    float maxTemperature = 30;
     float minTemperature = 0;
     String timeStamp = "";
 };
 
 //============================================================== VARIABLE DECORATION ==============================================================//
-// Task Handles
+// Task related variables
 extern TaskHandle_t setupTaskHandle;
 extern TaskHandle_t workingTaskHandle;
+extern QueueHandle_t taskQueue;
 
-// Mode flag
-extern bool isSetupMode;
 
-// WiFi Credentials
+// WiFi related variables
 extern String ssid;
 extern String password;
 extern bool disconnect_allowed;
+extern bool user_want_to_change_wifi;
 
-extern QueueHandle_t taskQueue;
-
-extern SensorData sensorData;
+// Hardware related variables
 extern ArtronShop_SHT3x sht3x;
-extern bool setAlert;
-extern bool just_send_alert;
+extern Button button;
 
-// Button object
-extern Button button; // GPIO 17, 50ms debounce, pull-up
 
+// Data related variable
+extern SensorData sensorData;
+extern int send_data_interval;
+extern int read_data_interval;
+
+// Firebase related variables
 extern FirebaseData fbdo;
 extern FirebaseAuth auth;
 extern FirebaseConfig config;
 extern String path;
 extern bool firebase_setup_done;
 
-extern bool enable_logging;
+// Alert related variables
+extern bool instant_alert_is_sent;
+extern bool buzzer_on;
 extern bool alert_is_set;
-extern bool user_want_to_change_wifi;
+
+// Other variables
+extern bool enable_logging;
+extern bool isSetupMode;
 
 
-//============================================================== FUNCTION DECORATION ==============================================================//
-bool loadWiFiCredentials();
-void saveWiFiCredentials(String newSSID, String newPassword);
-void readSensorData();
-void connectWiFi();
-void sendData();
-void sendAlert();
-String getFormattedTime();
-void checkSensorData();
-void setupFirebase();
-void to_database(const String &folder, void *data);
 
 //============================================================== FUNCTION DECORATION ==============================================================//
 template <typename... Args>
@@ -94,6 +89,7 @@ bool connect_to_wifi();
 void connect_to_firebase();
 void refresh_firebase_token();
 void get_config_data_from_firebase();
+void to_database(const String &folder, void *data);
 String get_formatted_time();
 void send_data_to_firebase();
 void disconnect_if_allowed();
@@ -103,8 +99,7 @@ void take_wifi_credential_from_user_input();
 
 
 
-
-// Define tasks
+//============================================================== TASK DECORATION ==============================================================//
 void Button_Task(void *pvParameters);
 void Setup_Task(void *pvParameters);
 void Working_Task(void *pvParameters);

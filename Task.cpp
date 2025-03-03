@@ -68,14 +68,14 @@ void Working_Task(void *pvParameters)
     {
         curTime = esp_timer_get_time() / 1000000;
 
-        if (curTime - read_data_pre_time >= 2)
+        if (curTime - read_data_pre_time >= read_data_interval)
         {
             int taskType = 1;
             xQueueSend(taskQueue, &taskType, 0);
             read_data_pre_time = curTime;
         }
 
-        if (curTime - send_data_pre_time >= 300)
+        if (curTime - send_data_pre_time >= send_data_interval)
         {
             int taskType = 2;
             xQueueSend(taskQueue, &taskType, 0);
@@ -84,7 +84,25 @@ void Working_Task(void *pvParameters)
 
         if (alert_is_set)
         {
-            
+            buzzer_on = true;
+            send_data_interval = 10;
+            disconnect_allowed = false;
+
+            if (!instant_alert_is_sent)
+            {
+                int taskType = 1;
+                xQueueSend(taskQueue, &taskType, 0);
+
+                instant_alert_is_sent = true;
+                logMessage("instant alert is sent!!!");
+            }
+        }
+        else
+        {
+            instant_alert_is_sent = false;
+            send_data_interval = 60;
+            disconnect_allowed = true;
+            buzzer_on = false;
         }
 
         vTaskDelay(pdMS_TO_TICKS(100));
