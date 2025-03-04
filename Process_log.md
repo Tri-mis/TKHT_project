@@ -11,4 +11,4 @@
     why the connection is kept alive. Also when the button is set to false, I should set the disconnect_allowed to true because we don't need to control the button any more.
 - What should I work on next time?
     - need to enable the fload configuration from firebase freature
-    - need to be able to turn off the buzzer from firebase
+    - need to be able to turn off the buzzer from firebase 

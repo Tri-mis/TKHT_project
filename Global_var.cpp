@@ -18,13 +18,15 @@ Button button(17, 50, true, false); // GPIO 17, 50ms debounce, pull-up
 
 // Data related variables
 SensorData sensorData;
-int send_data_interval = 60;
-int read_data_interval = 2;
+int send_data_interval_normal = 3600;
+int send_data_interval_in_alert = 300;
+int read_data_interval_normal = 2;
 
 // Firebase related variables
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
+FirebaseData stream;
 String path = "";
 bool firebase_setup_done = false;
 

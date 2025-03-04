@@ -38,7 +38,6 @@ bool load_wifi_credentials()
     return true;
 }
 
-
 void save_wifi_credentials()
 {
     int ssid_len = ssid.length();
@@ -125,7 +124,9 @@ void refresh_firebase_token()
 
 void get_config_data_from_firebase()
 {
-    logMessage("Configuration data is loaded from firebase");
+
+    if (from_database()) logMessage("Configuration data is loaded from firebase");
+    else logMessage("Failed to load configuration data from firebase");
 }
 
 void to_database(const String &folder, void *data)
@@ -170,6 +171,26 @@ void to_database(const String &folder, void *data)
     }
 }
 
+bool from_database()
+{
+    if 
+    (
+        Firebase.RTDB.getFloat(&fbdo, path + "/config/maxHumid", &sensorData.maxHumidity) &&
+        Firebase.RTDB.getFloat(&fbdo, path + "/config/minHumid", &sensorData.minHumidity) &&
+        Firebase.RTDB.getFloat(&fbdo, path + "/config/maxTemp", &sensorData.maxTemperature) &&
+        Firebase.RTDB.getFloat(&fbdo, path + "/config/minTemp", &sensorData.minTemperature)
+    )
+    {
+        logMessage("maxHumid: ", sensorData.maxHumidity, " | minHumid: ", sensorData.minHumidity, " | maxTemp: ", sensorData.maxTemperature, " | minTemp: ", sensorData.minTemperature);
+        return true;
+    }
+    else 
+    {
+        logMessage(fbdo.errorReason());
+        return false;
+    }
+}
+
 String get_formatted_time()
 {
     configTime(25200, 3600, "pool.ntp.org");
@@ -206,11 +227,11 @@ void disconnect_if_allowed()
     {
         WiFi.disconnect();
         fbdo.clear();
-        logMessage("Disconnect to wifi and firebase to save energy");
+        logMessage("Disconnection to wifi and firebase is allowed -> disconnect to wifi and firebase to save energy");
     }
     else
     {
-        logMessage("Disconnection to wifi and firebase is not allowed -> keeping connection alive");
+        logMessage("Disconnection to wifi and firebase is NOT allowed -> keeping connection alive");
     }
 }
 
@@ -218,18 +239,20 @@ void read_sensor_data()
 {
     if (sht3x.measure()) 
     {
-        sensorData.humidity = sht3x.humidity();
-        sensorData.temperature = sht3x.temperature();
-        Serial.print("Temperature: ");
-        Serial.print(sensorData.temperature, 1);
-        Serial.print(" *C\tHumidity: ");
-        Serial.print(sensorData.humidity, 1);
-        Serial.print(" %RH");
-        Serial.println();
+        sensorData.humidity = round(sht3x.humidity() * 100) / 100;
+        sensorData.temperature = round(sht3x.temperature() * 100) / 100;
+        logMessage("Temperature: ", sensorData.temperature, " *C  |  Humidity: ", sensorData.humidity, " %RH");
     }
     else 
     {
-        Serial.println("SHT3x read error");
+        logMessage("SHT3x read error");
+        Wire.end();
+        Wire.begin();
+        while (!sht3x.begin())
+        {
+            logMessage("SHT3x not found !");
+            delay(1000);
+        }
     }
 }
 
@@ -244,7 +267,7 @@ void check_sensor_data_to_send_alert()
     ) 
     {
         alert_is_set = true;
-        logMessage("Data exceed limits -> altert_is_set is set to true");
+        logMessage("Data exceed limits -> alert_is_set is set to true");
         
     } 
     else 

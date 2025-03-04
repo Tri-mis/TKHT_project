@@ -7,7 +7,7 @@ void Button_Task(void *pvParameters)
     {
         button.changeLeverState(false);
 
-        if (button.hold_state_time > 3000)
+        if (button.hold_state_time > 3000 && button.hold_state_time < 10000)
         {  // Held > 3s
             isSetupMode = !isSetupMode; // Toggle mode
 
@@ -26,6 +26,18 @@ void Button_Task(void *pvParameters)
             }
             button.hold_state_time = 0;
         }
+        else if(button.hold_state_time > 10000)
+        {
+            for (int i = 0; i < 512; i++) 
+            {
+                EEPROM.write(i, 0xFF);
+            }
+            
+            EEPROM.commit();
+            button.hold_state_time = 0;
+            logMessage("Clear EEPORM");
+        }
+
         vTaskDelay(10);
     }
 }
@@ -35,23 +47,20 @@ void Setup_Task(void *pvParameters)
 {
     while (true)
     {
-        if (load_wifi_credentials() && user_want_to_change_wifi == false)
+        if (load_wifi_credentials() && connect_to_wifi())
         {
-            if (connect_to_wifi())
-            {
-                connect_to_firebase();
-                get_config_data_from_firebase();
-                disconnect_if_allowed();
+            connect_to_firebase();
+            get_config_data_from_firebase();
+            disconnect_if_allowed();
 
-                vTaskResume(workingTaskHandle);
-                vTaskSuspend(setupTaskHandle);
-            }
+            isSetupMode = false;
+            vTaskResume(workingTaskHandle);
+            vTaskSuspend(setupTaskHandle);
         }
         else
         {
             take_wifi_credential_from_user_input();
             save_wifi_credentials();
-            user_want_to_change_wifi = false;
         }
 
         vTaskDelay(100);
@@ -63,6 +72,8 @@ void Working_Task(void *pvParameters)
     int64_t curTime;
     int64_t read_data_pre_time = 0;
     int64_t send_data_pre_time = 0;
+    int send_data_interval = send_data_interval_normal;
+    int read_data_interval = read_data_interval_normal;
 
     while (true)
     {
@@ -70,27 +81,29 @@ void Working_Task(void *pvParameters)
 
         if (curTime - read_data_pre_time >= read_data_interval)
         {
-            int taskType = 1;
+            int taskType = READ_DATA_TASK;
             xQueueSend(taskQueue, &taskType, 0);
             read_data_pre_time = curTime;
         }
 
+
         if (curTime - send_data_pre_time >= send_data_interval)
         {
-            int taskType = 2;
+            int taskType = SEND_DATA_TASK;
             xQueueSend(taskQueue, &taskType, 0);
             send_data_pre_time = curTime;
         }
 
+
         if (alert_is_set)
         {
             buzzer_on = true;
-            send_data_interval = 10;
+            send_data_interval = send_data_interval_in_alert;
             disconnect_allowed = false;
 
             if (!instant_alert_is_sent)
             {
-                int taskType = 1;
+                int taskType = SEND_DATA_TASK;
                 xQueueSend(taskQueue, &taskType, 0);
 
                 instant_alert_is_sent = true;
@@ -100,7 +113,7 @@ void Working_Task(void *pvParameters)
         else
         {
             instant_alert_is_sent = false;
-            send_data_interval = 60;
+            send_data_interval = send_data_interval_normal;
             disconnect_allowed = true;
             buzzer_on = false;
         }
@@ -108,3 +121,5 @@ void Working_Task(void *pvParameters)
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
+
+

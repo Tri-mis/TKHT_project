@@ -26,6 +26,8 @@
 #define USER_EMAIL "myesp32@gmail.com"
 #define USER_PASSWORD "15072003"
 
+#define READ_DATA_TASK 1
+#define SEND_DATA_TASK 2
 
 //============================================================== CLASS ==============================================================//
 class SensorData{
@@ -59,13 +61,15 @@ extern Button button;
 
 // Data related variable
 extern SensorData sensorData;
-extern int send_data_interval;
-extern int read_data_interval;
+extern int send_data_interval_normal;
+extern int send_data_interval_in_alert;
+extern int read_data_interval_normal;
 
 // Firebase related variables
 extern FirebaseData fbdo;
 extern FirebaseAuth auth;
 extern FirebaseConfig config;
+extern FirebaseData stream;
 extern String path;
 extern bool firebase_setup_done;
 
@@ -89,6 +93,7 @@ bool connect_to_wifi();
 void connect_to_firebase();
 void refresh_firebase_token();
 void get_config_data_from_firebase();
+bool from_database();
 void to_database(const String &folder, void *data);
 String get_formatted_time();
 void send_data_to_firebase();

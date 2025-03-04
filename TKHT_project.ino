@@ -7,7 +7,7 @@ void setup()
     Wire.begin();
     while (!sht3x.begin())
     {
-        Serial.println("SHT3x not found !");
+        logMessage("SHT3x not found !");
         delay(1000);
     }
 
@@ -15,7 +15,7 @@ void setup()
     EEPROM.begin(EEPROM_SIZE); // Initialize EEPROM
     
     // Create tasks
-    xTaskCreatePinnedToCore(Button_Task, "ButtonTask", 1024, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Button_Task, "ButtonTask", 2048, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Setup_Task, "SetupTask", 8000, NULL, 1, &setupTaskHandle, 0);
     xTaskCreatePinnedToCore(Working_Task, "WorkingTask", 1024, NULL, 1, &workingTaskHandle, 0);
 
@@ -29,11 +29,12 @@ void loop()
     {
         switch (receivedTask)
         {
-            case 1:
+            case READ_DATA_TASK:
                 read_sensor_data();
                 check_sensor_data_to_send_alert();
                 break;
-            case 2:
+
+            case SEND_DATA_TASK:
                 if (connect_to_wifi())
                 {
                     refresh_firebase_token();
@@ -46,6 +47,8 @@ void loop()
                     logMessage("Unable to connect to WiFi -> abort sending data to firebase");
                 }
                 break;
+
+                
         }
     }
 }
