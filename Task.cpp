@@ -1,3 +1,4 @@
+#include "HardwareSerial.h"
 #include "TKHT_lib.h"
 
 // BUTTON TASK
@@ -9,9 +10,9 @@ void Button_Task(void *pvParameters)
 
         if (button.hold_state_time > 3000 && button.hold_state_time < 10000)
         {  // Held > 3s
-            isSetupMode = !isSetupMode; // Toggle mode
+            is_setup_mode = !is_setup_mode; // Toggle mode
 
-            if (isSetupMode)
+            if (is_setup_mode)
             {
                 Serial.println("Switching to SETUP mode...");
                 user_want_to_change_wifi = true;
@@ -53,7 +54,7 @@ void Setup_Task(void *pvParameters)
             get_config_data_from_firebase();
             disconnect_if_allowed();
 
-            isSetupMode = false;
+            is_setup_mode = false;
             vTaskResume(workingTaskHandle);
             vTaskSuspend(setupTaskHandle);
         }
@@ -72,8 +73,9 @@ void Working_Task(void *pvParameters)
     int64_t curTime;
     int64_t read_data_pre_time = 0;
     int64_t send_data_pre_time = 0;
-    int send_data_interval = send_data_interval_normal;
-    int read_data_interval = read_data_interval_normal;
+    int64_t handel_alert_pre_time = 0;
+
+    send_data_interval = send_data_interval_normal;
 
     while (true)
     {
@@ -83,6 +85,7 @@ void Working_Task(void *pvParameters)
         {
             int taskType = READ_DATA_TASK;
             xQueueSend(taskQueue, &taskType, 0);
+
             read_data_pre_time = curTime;
         }
 
@@ -91,32 +94,18 @@ void Working_Task(void *pvParameters)
         {
             int taskType = SEND_DATA_TASK;
             xQueueSend(taskQueue, &taskType, 0);
+
             send_data_pre_time = curTime;
         }
 
-
-        if (alert_is_set)
+        if (curTime - handel_alert_pre_time >= handel_alert_interval)
         {
-            buzzer_on = true;
-            send_data_interval = send_data_interval_in_alert;
-            disconnect_allowed = false;
+            int taskType = HANDLE_ALERT_TASK;
+            xQueueSend(taskQueue, &taskType, 0);
 
-            if (!instant_alert_is_sent)
-            {
-                int taskType = SEND_DATA_TASK;
-                xQueueSend(taskQueue, &taskType, 0);
+            handel_alert_pre_time = curTime;
+        }
 
-                instant_alert_is_sent = true;
-                logMessage("instant alert is sent!!!");
-            }
-        }
-        else
-        {
-            instant_alert_is_sent = false;
-            send_data_interval = send_data_interval_normal;
-            disconnect_allowed = true;
-            buzzer_on = false;
-        }
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }

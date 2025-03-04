@@ -138,17 +138,17 @@ void to_database(const String &folder, void *data)
         if (folder == "temp") 
         {
             float *temperature = static_cast<float *>(data);
-            success = Firebase.RTDB.pushFloat(&fbdo, path + "/temp", *temperature);
+            success = Firebase.RTDB.pushFloat(&fbdo, path + "/data/temp", *temperature);
         } 
         else if (folder == "humid") 
         {
             float *humidity = static_cast<float *>(data);
-            success = Firebase.RTDB.pushFloat(&fbdo, path + "/humid", *humidity);
+            success = Firebase.RTDB.pushFloat(&fbdo, path + "/data/humid", *humidity);
         } 
         else if (folder == "time") 
         {
             String *time = static_cast<String *>(data);
-            success = Firebase.RTDB.pushString(&fbdo, path + "/time", *time);
+            success = Firebase.RTDB.pushString(&fbdo, path + "/data/time", *time);
         } 
         else 
         {
@@ -223,15 +223,18 @@ void send_data_to_firebase()
 
 void disconnect_if_allowed()
 {
-    if (disconnect_allowed)
+    if (WiFi.status() == WL_CONNECTED)
     {
-        WiFi.disconnect();
-        fbdo.clear();
-        logMessage("Disconnection to wifi and firebase is allowed -> disconnect to wifi and firebase to save energy");
-    }
-    else
-    {
-        logMessage("Disconnection to wifi and firebase is NOT allowed -> keeping connection alive");
+        if (disconnect_allowed)
+        {
+            WiFi.disconnect();
+            fbdo.clear();
+            logMessage("Disconnection to wifi and firebase is allowed -> disconnect to wifi and firebase to save energy");
+        }
+        else
+        {
+            logMessage("Disconnection to wifi and firebase is NOT allowed -> keeping connection alive");
+        }
     }
 }
 
@@ -290,6 +293,21 @@ void take_wifi_credential_from_user_input()
     while (Serial.available() == 0) vTaskDelay(100);
     password = Serial.readStringUntil('\n');
     password.trim();
+}
+
+void begin_data_streamming()
+{
+    logMessage("Begin data streamming");
+}
+
+void check_for_buzzer_turn_off()
+{
+    logMessage("Check for buzzer turned off from stream | DO NOT TURN STREAM OFF EVEN WHEN BUZZER IS TURNED OFF");
+}
+
+void stop_data_streaming()
+{
+    logMessage("Stop data streaming");
 }
 
 

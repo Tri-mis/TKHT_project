@@ -28,16 +28,17 @@
 
 #define READ_DATA_TASK 1
 #define SEND_DATA_TASK 2
+#define HANDLE_ALERT_TASK 3
 
-//============================================================== CLASS ==============================================================//
+//============================================================== DATA CLASS ==============================================================//
 class SensorData{
   public:
     float humidity = 0;
     float temperature = 0;
-    float maxHumidity = 100;
-    float minHumidity = 0;
-    float maxTemperature = 30;
-    float minTemperature = 0;
+    float maxHumidity = 1000;
+    float minHumidity = -1000;
+    float maxTemperature = 1000;
+    float minTemperature = -1000;
     String timeStamp = "";
 };
 
@@ -61,9 +62,11 @@ extern Button button;
 
 // Data related variable
 extern SensorData sensorData;
+extern int send_data_interval;
 extern int send_data_interval_normal;
 extern int send_data_interval_in_alert;
-extern int read_data_interval_normal;
+extern int read_data_interval;
+extern int handel_alert_interval;
 
 // Firebase related variables
 extern FirebaseData fbdo;
@@ -72,15 +75,16 @@ extern FirebaseConfig config;
 extern FirebaseData stream;
 extern String path;
 extern bool firebase_setup_done;
+extern bool stream_is_on;
 
 // Alert related variables
-extern bool instant_alert_is_sent;
+extern bool alert_handeling_is_init;
 extern bool buzzer_on;
 extern bool alert_is_set;
 
 // Other variables
 extern bool enable_logging;
-extern bool isSetupMode;
+extern bool is_setup_mode;
 
 
 
@@ -101,7 +105,9 @@ void disconnect_if_allowed();
 void read_sensor_data();
 void check_sensor_data_to_send_alert();
 void take_wifi_credential_from_user_input();
-
+void begin_data_streamming();
+void check_for_buzzer_turn_off();
+void stop_data_streaming();
 
 
 //============================================================== TASK DECORATION ==============================================================//
