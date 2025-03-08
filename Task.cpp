@@ -53,6 +53,7 @@ void Setup_Task(void *pvParameters)
             connect_to_firebase();
             get_config_data_from_firebase();
             disconnect_if_allowed();
+            stop_bluetooth();
 
             is_setup_mode = false;
             vTaskResume(workingTaskHandle);
@@ -60,7 +61,7 @@ void Setup_Task(void *pvParameters)
         }
         else
         {
-            take_wifi_credential_from_user_input();
+            start_taking_wifi_credentials_using_bluetooth();
             save_wifi_credentials();
         }
 

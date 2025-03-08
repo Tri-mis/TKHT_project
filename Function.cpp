@@ -341,6 +341,74 @@ void streamTimeoutCallback(bool timeout)
 }
 
 
+void start_taking_wifi_credentials_using_bluetooth()
+{
+    // Reset stored credentials to ensure fresh data is received
+    ssid = "";
+    password = "";
+
+    Serial.println("Starting Bluetooth and waiting for WiFi credentials...");
+
+    if (!bluetooth_is_init)
+    {
+        // Initialize Bluetooth
+        NimBLEDevice::init("ESP32-WiFi-Config");
+        pServer = NimBLEDevice::createServer();
+
+        pService = pServer->createService("1234");
+        pWiFiCharacteristic = pService->createCharacteristic(
+            "5678",
+            NIMBLE_PROPERTY::WRITE
+        );
+
+        pService->start();
+
+        pAdvertising = NimBLEDevice::getAdvertising();
+        pAdvertising->addServiceUUID(pService->getUUID());
+        pAdvertising->start();
+
+        bluetooth_is_init = true;
+    }
+
+
+    // Blocking loop to wait for credentials
+    while (ssid.length() == 0 || password.length() == 0) 
+    {
+        std::string value = pWiFiCharacteristic->getValue();
+        if (!value.empty()) 
+        {
+            size_t separator = value.find("|");
+            if (separator != std::string::npos) 
+            {
+                ssid = String(value.substr(0, separator).c_str());  // Convert std::string to String
+                password = String(value.substr(separator + 1).c_str());
+                Serial.printf("Received SSID: %s, Password: %s\n", ssid.c_str(), password.c_str());
+                break;  // Exit the loop once credentials are received
+            }
+        }
+        delay(100);  // Prevents excessive CPU usage
+    }
+
+    Serial.println("WiFi credentials received. Proceeding...");
+}
+
+
+void stop_bluetooth() 
+{
+    Serial.println("Stopping Bluetooth...");
+
+    if (pServer) {
+        pServer->getAdvertising()->stop();  // Stop BLE advertising
+        pServer->removeService(pServer->getServiceByUUID("1234"));  // Remove service if exists
+        NimBLEDevice::deinit(true);  // Fully shut down NimBLE and free memory
+        pServer = nullptr;  // Reset pointer
+        bluetooth_is_init = false;
+    }
+
+    Serial.println("Bluetooth Stopped and Memory Freed.");
+}
+
+
 
 
 

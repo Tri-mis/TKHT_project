@@ -14,6 +14,7 @@
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
+#include <NimBLEDevice.h>
 
 // EEPROM settings
 #define EEPROM_SIZE 100
@@ -43,6 +44,9 @@ class SensorData{
     float minTemperature = -1000;
     String timeStamp = "";
 };
+
+//============================================================== BLUETOOTH CLASS ==============================================================//
+
 
 //============================================================== VARIABLE DECORATION ==============================================================//
 // Task related variables
@@ -88,6 +92,12 @@ extern bool alert_is_set;
 extern bool enable_logging;
 extern bool is_setup_mode;
 
+// Bluetooth variables
+extern NimBLEServer* pServer;
+extern NimBLEService* pService;
+extern NimBLECharacteristic* pWiFiCharacteristic;
+extern NimBLEAdvertising* pAdvertising;
+extern bool bluetooth_is_init;
 
 
 //============================================================== FUNCTION DECORATION ==============================================================//
@@ -111,6 +121,8 @@ void begin_data_streamming();
 void stop_data_streaming();
 void streamCallback(FirebaseStream data);
 void streamTimeoutCallback(bool timeout);
+void start_taking_wifi_credentials_using_bluetooth();
+void stop_bluetooth();
 
 
 //============================================================== TASK DECORATION ==============================================================//

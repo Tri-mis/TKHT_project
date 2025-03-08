@@ -42,3 +42,9 @@ bool alert_is_set = false;
 bool enable_logging = true;
 bool is_setup_mode = false;
 
+// Bluetooth variables
+NimBLEServer* pServer;
+NimBLEService* pService;
+NimBLECharacteristic* pWiFiCharacteristic;
+NimBLEAdvertising* pAdvertising;
+bool bluetooth_is_init = false;
