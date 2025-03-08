@@ -125,7 +125,12 @@ void refresh_firebase_token()
 void get_config_data_from_firebase()
 {
 
-    if (from_database()) logMessage("Configuration data is loaded from firebase");
+    if (from_database()) 
+    {
+        send_data_interval = send_data_interval_normal;
+        logMessage("Configuration data is loaded from firebase");
+    }
+
     else logMessage("Failed to load configuration data from firebase");
 }
 
@@ -135,21 +140,26 @@ void to_database(const String &folder, void *data)
     {
         bool success = false;
 
-        if (folder == "temp") 
+        if (folder == "/data/temp") 
         {
             float *temperature = static_cast<float *>(data);
-            success = Firebase.RTDB.pushFloat(&fbdo, path + "/data/temp", *temperature);
+            success = Firebase.RTDB.pushFloat(&fbdo, path + folder, *temperature);
         } 
-        else if (folder == "humid") 
+        else if (folder == "/data/humid") 
         {
             float *humidity = static_cast<float *>(data);
-            success = Firebase.RTDB.pushFloat(&fbdo, path + "/data/humid", *humidity);
+            success = Firebase.RTDB.pushFloat(&fbdo, path + folder, *humidity);
         } 
-        else if (folder == "time") 
+        else if (folder == "/data/time") 
         {
             String *time = static_cast<String *>(data);
-            success = Firebase.RTDB.pushString(&fbdo, path + "/data/time", *time);
+            success = Firebase.RTDB.pushString(&fbdo, path + folder, *time);
         } 
+        else if (folder == "/actuator/buzzer")
+        {
+            bool *buzzer_on = static_cast<bool *>(data);
+            success = Firebase.RTDB.setBool(&fbdo, path + folder, *buzzer_on);
+        }
         else 
         {
             Serial.println("Unsupported folder type.");
@@ -158,7 +168,7 @@ void to_database(const String &folder, void *data)
 
         if (success) 
         {
-            Serial.println("\tSent: " + path + "/" + folder);  
+            Serial.println("\tSent: " + path + folder);  
         } 
         else 
         {
@@ -178,10 +188,13 @@ bool from_database()
         Firebase.RTDB.getFloat(&fbdo, path + "/config/maxHumid", &sensorData.maxHumidity) &&
         Firebase.RTDB.getFloat(&fbdo, path + "/config/minHumid", &sensorData.minHumidity) &&
         Firebase.RTDB.getFloat(&fbdo, path + "/config/maxTemp", &sensorData.maxTemperature) &&
-        Firebase.RTDB.getFloat(&fbdo, path + "/config/minTemp", &sensorData.minTemperature)
+        Firebase.RTDB.getFloat(&fbdo, path + "/config/minTemp", &sensorData.minTemperature) &&
+        Firebase.RTDB.getInt(&fbdo, path + "/config/update_interval_normal", &send_data_interval_normal) &&
+        Firebase.RTDB.getInt(&fbdo, path + "/config/update_interval_alert", &send_data_interval_in_alert)
     )
     {
         logMessage("maxHumid: ", sensorData.maxHumidity, " | minHumid: ", sensorData.minHumidity, " | maxTemp: ", sensorData.maxTemperature, " | minTemp: ", sensorData.minTemperature);
+        logMessage("send_data_interval_normal: ", send_data_interval_normal, " seconds | update_interval_alert: ", send_data_interval_in_alert, " seconds");
         return true;
     }
     else 
@@ -214,9 +227,9 @@ void send_data_to_firebase()
     if (alert_is_set) logMessage("Alert update!!!");
     else logMessage("Normal update");
 
-    to_database("temp", (void*) &sensorData.temperature);
-    to_database("humid", (void*) &sensorData.humidity);
-    to_database("time", (void*) &sensorData.timeStamp);
+    to_database("/data/temp", (void*) &sensorData.temperature);
+    to_database("/data/humid", (void*) &sensorData.humidity);
+    to_database("/data/time", (void*) &sensorData.timeStamp);
 
     logMessage("Temperature: ", sensorData.temperature, "  |  Humidity: ", sensorData.humidity, "  |  Timestamp: ", sensorData.timeStamp);
 }
@@ -297,28 +310,35 @@ void take_wifi_credential_from_user_input()
 
 void begin_data_streamming()
 {
+    Firebase.RTDB.beginStream(&stream, path + "/actuator");
+    Firebase.RTDB.setStreamCallback(&stream, streamCallback, streamTimeoutCallback);
     logMessage("Begin data streamming");
-}
-
-void check_for_buzzer_turn_off()
-{
-    logMessage("Check for buzzer turned off from stream | DO NOT TURN STREAM OFF EVEN WHEN BUZZER IS TURNED OFF");
 }
 
 void stop_data_streaming()
 {
+    Firebase.RTDB.endStream(&stream);
+    stream.clear();
     logMessage("Stop data streaming");
 }
 
+void streamCallback(FirebaseStream data)
+{
+    if (data.dataTypeEnum() == fb_esp_rtdb_data_type_boolean)
+    {
+        buzzer_on = data.boolData();
+        digitalWrite(BUZZER_PIN, buzzer_on);
+        logMessage("User turn buzzer off");
+    }
+}
 
-
-
-
-
-
-
-
-
+void streamTimeoutCallback(bool timeout)
+{
+  if (timeout)
+    logMessage("stream timeout, resuming...\n");
+  if (!stream.httpConnected())
+    logMessage("error code: %d, reason: %s\n\n", stream.httpCode(), stream.errorReason().c_str());
+}
 
 
 

@@ -30,6 +30,8 @@
 #define SEND_DATA_TASK 2
 #define HANDLE_ALERT_TASK 3
 
+#define BUZZER_PIN 12
+
 //============================================================== DATA CLASS ==============================================================//
 class SensorData{
   public:
@@ -106,8 +108,9 @@ void read_sensor_data();
 void check_sensor_data_to_send_alert();
 void take_wifi_credential_from_user_input();
 void begin_data_streamming();
-void check_for_buzzer_turn_off();
 void stop_data_streaming();
+void streamCallback(FirebaseStream data);
+void streamTimeoutCallback(bool timeout);
 
 
 //============================================================== TASK DECORATION ==============================================================//

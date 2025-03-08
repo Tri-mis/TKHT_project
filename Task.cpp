@@ -36,7 +36,7 @@ void Button_Task(void *pvParameters)
             
             EEPROM.commit();
             button.hold_state_time = 0;
-            logMessage("Clear EEPORM");
+            Serial.println("Clear EEPORM");
         }
 
         vTaskDelay(10);
@@ -75,8 +75,6 @@ void Working_Task(void *pvParameters)
     int64_t send_data_pre_time = 0;
     int64_t handel_alert_pre_time = 0;
 
-    send_data_interval = send_data_interval_normal;
-
     while (true)
     {
         curTime = esp_timer_get_time() / 1000000;
@@ -106,9 +104,6 @@ void Working_Task(void *pvParameters)
             handel_alert_pre_time = curTime;
         }
 
-
         vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
-
-

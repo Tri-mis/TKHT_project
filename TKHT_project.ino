@@ -3,6 +3,8 @@
 void setup()
 {
     Serial.begin(115200);
+
+    pinMode(BUZZER_PIN, OUTPUT);
     
     Wire.begin();
     while (!sht3x.begin())
@@ -30,11 +32,13 @@ void loop()
         switch (receivedTask)
         {
             case READ_DATA_TASK:
+                logMessage("\n==================== READ DATA TASK ====================");
                 read_sensor_data();
                 check_sensor_data_to_send_alert();
                 break;
 
             case SEND_DATA_TASK:
+                logMessage("\n==================== SEND DATA TASK ====================");
                 if (connect_to_wifi())
                 {
                     refresh_firebase_token();
@@ -49,11 +53,15 @@ void loop()
                 break;
             
             case HANDLE_ALERT_TASK:
+                logMessage("\n=================== HANDLE ALERT TASK ==================");
                 if (alert_is_set)
                 {
+                    logMessage("Alert!!!");
+
                     if (!alert_handeling_is_init)
                     {
                         buzzer_on = true; // turn on the buzzer
+                        digitalWrite(BUZZER_PIN, buzzer_on);
                         send_data_interval = send_data_interval_in_alert;
                         disconnect_allowed = false;
 
@@ -62,8 +70,8 @@ void loop()
                             refresh_firebase_token();
                             sensorData.timeStamp = get_formatted_time();
                             send_data_to_firebase();
-                            
-                            begin_data_streamming(); // begin a new data stream
+                            to_database("/actuator/buzzer", (void*) &buzzer_on);
+                            begin_data_streamming();// begin a new data stream
                             stream_is_on = true;
                             alert_handeling_is_init = true;
                         }
@@ -73,27 +81,29 @@ void loop()
                         }
                     }
 
-                    check_for_buzzer_turn_off(); //listen to the stream, if the buzzer get turn off, dont end the stream!!
                 }
                 else
                 {
-                    if (stream_is_on) 
+                    logMessage("No alert");
+
+                    if (stream_is_on)
                     {
-                        stop_data_streaming(); // stop a data stream, make sure a new one can be created
+                        // stop a data stream, make sure a new one can be created
+                        stop_data_streaming();
+                        buzzer_on = false;
+                        digitalWrite(BUZZER_PIN, buzzer_on);
+                        to_database("/actuator/buzzer", (void*) &buzzer_on);
                         stream_is_on = false;
                     }
 
                     alert_handeling_is_init = false;
-                    buzzer_on = false;
                     disconnect_allowed = true;
                     send_data_interval = send_data_interval_normal;
 
                     disconnect_if_allowed();
                 }
                 
-                break;
-
-                
+                break;  
         }
     }
 }
