@@ -5,6 +5,9 @@ void setup()
     Serial.begin(115200);
 
     pinMode(BUZZER_PIN, OUTPUT);
+    pinMode(RED_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
+    pinMode(YELLOW_LED, OUTPUT);
     
     Wire.begin();
     while (!sht3x.begin())
@@ -17,12 +20,13 @@ void setup()
     EEPROM.begin(EEPROM_SIZE); // Initialize EEPROM
     
     // Create tasks
-    xTaskCreatePinnedToCore(Button_Task, "ButtonTask", 2048, NULL, 1, NULL, 1);
+    xTaskCreatePinnedToCore(Hardware_Control, "Hardware_Control", 2048, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(Setup_Task, "SetupTask", 8000, NULL, 1, &setupTaskHandle, 0);
     xTaskCreatePinnedToCore(Working_Task, "WorkingTask", 1024, NULL, 1, &workingTaskHandle, 0);
 
-    vTaskSuspend(workingTaskHandle); // only keep the Setup task running, if it done successfully, it auto matically change to working task
+    change_task(true);
 }
+
 
 void loop()
 {

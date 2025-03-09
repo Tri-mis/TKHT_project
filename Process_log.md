@@ -45,4 +45,19 @@
 
 - Now the folder where I put the buzzer control val is actuator/buzzer. Currently I am thinking of letting the button_task control all the hardware in cluding the fan and the button, but I have not done it.
 
+============================================================== 20:00 - 08/03/2025 ==============================================================
+
+- I have just added wifi provisioning using bluetooth, but there is still one problem though. It works like this: it enter setup mode, try to connect to wifi, if not success it turn to
+    opening bluetooth to ask for wifi credential. Then I can input the wifi credential through bluetooth. If the credentials are correct and wifi is connected successfully, it close bluetooth connection and work just fine.
+    However, if the credential is not correct, it does not close bluetooth connection as expected, but when it ask for the credential, it will always see the credential is already inputed
+    as the client always sent the credential, so it just take the old credential to connect to wifi. It still works fine because when I change the credential on the client, then when the device
+    turn back to ask for the credential (because the old credential is wrong) it will update the new credential. What I want is that some how, when it ask for the new credential, it wait untill the 
+    new credential is inputed rather than unimformingly grab the old credentail and try to connect.
+
+============================================================== 08:10 - 09/03/2025 ==============================================================
+
+- I have just added led and buzzer and everything works fine. the green led turn on in working mode, the yellow turn on in setup mode. in setup mode, the red flicker if connected unsuccessfully
+    and the green flicker if connected successfully.
+    
+
 

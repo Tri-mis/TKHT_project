@@ -1,3 +1,4 @@
+#include "esp32-hal-gpio.h"
 #include "TKHT_lib.h"
 
 template <typename... Args>
@@ -347,7 +348,7 @@ void start_taking_wifi_credentials_using_bluetooth()
     ssid = "";
     password = "";
 
-    Serial.println("Starting Bluetooth and waiting for WiFi credentials...");
+    logMessage("Starting Bluetooth and waiting for WiFi credentials...");
 
     if (!bluetooth_is_init)
     {
@@ -375,27 +376,27 @@ void start_taking_wifi_credentials_using_bluetooth()
     while (ssid.length() == 0 || password.length() == 0) 
     {
         std::string value = pWiFiCharacteristic->getValue();
-        if (!value.empty()) 
+        if (!value.empty())
         {
             size_t separator = value.find("|");
             if (separator != std::string::npos) 
             {
                 ssid = String(value.substr(0, separator).c_str());  // Convert std::string to String
                 password = String(value.substr(separator + 1).c_str());
-                Serial.printf("Received SSID: %s, Password: %s\n", ssid.c_str(), password.c_str());
+                logMessage("ssid: ", ssid, " | password: ", password);
                 break;  // Exit the loop once credentials are received
             }
         }
         delay(100);  // Prevents excessive CPU usage
     }
 
-    Serial.println("WiFi credentials received. Proceeding...");
+    logMessage("WiFi credentials received. Proceeding...");
 }
 
 
 void stop_bluetooth() 
 {
-    Serial.println("Stopping Bluetooth...");
+    logMessage("Stopping Bluetooth...");
 
     if (pServer) {
         pServer->getAdvertising()->stop();  // Stop BLE advertising
@@ -405,7 +406,53 @@ void stop_bluetooth()
         bluetooth_is_init = false;
     }
 
-    Serial.println("Bluetooth Stopped and Memory Freed.");
+    logMessage("Bluetooth Stopped and Memory Freed.");
+}
+
+void change_task(bool change_to_setup)
+{
+    if (change_to_setup)
+    {
+        is_setup_mode = true;
+        digitalWrite(YELLOW_LED, 1);
+        digitalWrite(GREEN_LED, 0);
+        vTaskResume(setupTaskHandle);
+        vTaskSuspend(workingTaskHandle);
+    }
+    else
+    {
+        is_setup_mode = false;
+        digitalWrite(GREEN_LED, 1);
+        digitalWrite(YELLOW_LED, 0);
+        vTaskResume(workingTaskHandle);
+        vTaskSuspend(setupTaskHandle);
+    }
+}
+
+void led_flicker(int interval, int times, int led)
+{
+    int status = digitalRead(led);
+
+    if (!status)
+    {
+        for (int i = 0; i < times; i ++)
+        {
+            digitalWrite(led, 1);
+            delay(interval);
+            digitalWrite(led, 0);
+            delay(interval);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < times; i ++)
+        {
+            digitalWrite(led, 0);
+            delay(interval);
+            digitalWrite(led, 1);
+            delay(interval);
+        }
+    }
 }
 
 

@@ -31,7 +31,10 @@
 #define SEND_DATA_TASK 2
 #define HANDLE_ALERT_TASK 3
 
-#define BUZZER_PIN 12
+#define BUZZER_PIN 33
+#define GREEN_LED 13
+#define YELLOW_LED 12
+#define RED_LED 27
 
 //============================================================== DATA CLASS ==============================================================//
 class SensorData{
@@ -123,9 +126,11 @@ void streamCallback(FirebaseStream data);
 void streamTimeoutCallback(bool timeout);
 void start_taking_wifi_credentials_using_bluetooth();
 void stop_bluetooth();
+void change_task(bool change_to_setup);
+void led_flicker(int interval, int times, int led);
 
 
 //============================================================== TASK DECORATION ==============================================================//
-void Button_Task(void *pvParameters);
+void Hardware_Control(void *pvParameters);
 void Setup_Task(void *pvParameters);
 void Working_Task(void *pvParameters);

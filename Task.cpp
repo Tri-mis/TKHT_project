@@ -2,7 +2,7 @@
 #include "TKHT_lib.h"
 
 // BUTTON TASK
-void Button_Task(void *pvParameters)
+void Hardware_Control(void *pvParameters)
 {
     while (true)
     {
@@ -16,14 +16,12 @@ void Button_Task(void *pvParameters)
             {
                 Serial.println("Switching to SETUP mode...");
                 user_want_to_change_wifi = true;
-                vTaskSuspend(workingTaskHandle);
-                vTaskResume(setupTaskHandle);
+                change_task(true);
             }
             else
             {
                 Serial.println("Switching to WORKING mode...");
-                vTaskSuspend(setupTaskHandle);
-                vTaskResume(workingTaskHandle);
+                change_task(false);
             }
             button.hold_state_time = 0;
         }
@@ -54,13 +52,13 @@ void Setup_Task(void *pvParameters)
             get_config_data_from_firebase();
             disconnect_if_allowed();
             stop_bluetooth();
+            led_flicker(200, 3, GREEN_LED);
 
-            is_setup_mode = false;
-            vTaskResume(workingTaskHandle);
-            vTaskSuspend(setupTaskHandle);
+            change_task(false);
         }
         else
         {
+            led_flicker(200, 3, RED_LED);
             start_taking_wifi_credentials_using_bluetooth();
             save_wifi_credentials();
         }
