@@ -18,7 +18,7 @@ Button button(17, 50, true, false);
 
 // Data related variables
 SensorData sensorData;
-int send_data_interval = 0;
+int send_data_interval = 3600;
 int send_data_interval_normal = 3600;
 int send_data_interval_in_alert = 300;
 int read_data_interval = 2;
@@ -43,8 +43,7 @@ bool enable_logging = true;
 bool is_setup_mode = false;
 
 // Bluetooth variables
-NimBLEServer* pServer;
-NimBLEService* pService;
-NimBLECharacteristic* pWiFiCharacteristic;
-NimBLEAdvertising* pAdvertising;
+BLEServer* pServer = NULL;
+BLECharacteristic* pWiFiCharacteristic = NULL;
+BLECharacteristic* pMacCharacteristic = NULL;
 bool bluetooth_is_init = false;

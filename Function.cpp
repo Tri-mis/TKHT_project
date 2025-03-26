@@ -1,3 +1,4 @@
+#include "esp32-hal-adc.h"
 #include "esp32-hal-gpio.h"
 #include "TKHT_lib.h"
 
@@ -161,6 +162,16 @@ void to_database(const String &folder, void *data)
             bool *buzzer_on = static_cast<bool *>(data);
             success = Firebase.RTDB.setBool(&fbdo, path + folder, *buzzer_on);
         }
+        else if (folder == "/data/battery")
+        {
+            int *battery = static_cast<int *>(data);
+            success = Firebase.RTDB.setInt(&fbdo, path + folder, *battery);
+        }
+        else if(folder == "/device_data")
+        {
+            String *device_data = static_cast<String *>(data);
+            success = Firebase.RTDB.pushString(&fbdo, path + folder, *device_data);
+        }
         else 
         {
             Serial.println("Unsupported folder type.");
@@ -221,6 +232,22 @@ String get_formatted_time()
     return String(timeStr);
 }
 
+String formatData(String timeStampe, float temperature, float humidity, int battery) {
+    // Extract day, month, hour, and minute from timeStampe
+    String day = timeStampe.substring(0, 2);
+    String month = timeStampe.substring(3, 5);
+    String hour = timeStampe.substring(11, 13);
+    String minute = timeStampe.substring(14, 16);
+
+    // Format the output string
+    String result = day + "/" + month + "|" + hour + ":" + minute + "|";
+    result += String(temperature, 2) + "|";
+    result += String(humidity, 2) + "|";
+    result += String(battery);
+
+    return result;
+}
+
 void send_data_to_firebase()
 {
     sensorData.timeStamp = get_formatted_time();
@@ -228,9 +255,14 @@ void send_data_to_firebase()
     if (alert_is_set) logMessage("Alert update!!!");
     else logMessage("Normal update");
 
-    to_database("/data/temp", (void*) &sensorData.temperature);
-    to_database("/data/humid", (void*) &sensorData.humidity);
-    to_database("/data/time", (void*) &sensorData.timeStamp);
+    String data_to_sent = formatData(sensorData.timeStamp, sensorData.temperature, sensorData.humidity, sensorData.battery);
+
+    // to_database("/data/temp", (void*) &sensorData.temperature);
+    // to_database("/data/humid", (void*) &sensorData.humidity);
+    // to_database("/data/time", (void*) &sensorData.timeStamp);
+    // to_database("/data/battery", (void*) &sensorData.battery);
+
+    to_database("/device_data", (void*) &data_to_sent);
 
     logMessage("Temperature: ", sensorData.temperature, "  |  Humidity: ", sensorData.humidity, "  |  Timestamp: ", sensorData.timeStamp);
 }
@@ -328,8 +360,15 @@ void streamCallback(FirebaseStream data)
     if (data.dataTypeEnum() == fb_esp_rtdb_data_type_boolean)
     {
         buzzer_on = data.boolData();
-        digitalWrite(BUZZER_PIN, buzzer_on);
-        logMessage("User turn buzzer off");
+        if (!buzzer_on)
+        {
+            digitalWrite(BUZZER_PIN, buzzer_on);
+            logMessage("User turn buzzer off");
+        }
+        else
+        {
+            logMessage("Error turning off buzzer");
+        }
     }
 }
 
@@ -344,7 +383,7 @@ void streamTimeoutCallback(bool timeout)
 
 void start_taking_wifi_credentials_using_bluetooth()
 {
-    // Reset stored credentials to ensure fresh data is received
+    // Reset stored credentials
     ssid = "";
     password = "";
 
@@ -352,39 +391,62 @@ void start_taking_wifi_credentials_using_bluetooth()
 
     if (!bluetooth_is_init)
     {
-        // Initialize Bluetooth
-        NimBLEDevice::init("ESP32-WiFi-Config");
-        pServer = NimBLEDevice::createServer();
 
-        pService = pServer->createService("1234");
+        BLEDevice::init("ESP32");
+
+        // Create the BLE Server
+        pServer = BLEDevice::createServer();
+        pServer->setCallbacks(new MyServerCallbacks());
+
+        // Create BLE Service
+        BLEService* pService = pServer->createService(SERVICE_UUID);
+
+        // Create WiFi Credential Characteristic
         pWiFiCharacteristic = pService->createCharacteristic(
-            "5678",
-            NIMBLE_PROPERTY::WRITE
+            WIFI_CHARACTERISTIC_UUID,
+            BLECharacteristic::PROPERTY_WRITE
         );
+        pWiFiCharacteristic->addDescriptor(new BLE2902());
 
+
+        // Create WiFi MAC Characteristic
+        pMacCharacteristic = pService->createCharacteristic(
+            MAC_CHARACTERISTIC_UUID,
+            BLECharacteristic::PROPERTY_READ
+        );
+        pMacCharacteristic->addDescriptor(new BLE2902());
+        // Get WiFi MAC Address instead of Bluetooth MAC
+        String macStr = WiFi.macAddress();
+        pMacCharacteristic->setValue(macStr.c_str());
+
+        // Start the service
         pService->start();
 
-        pAdvertising = NimBLEDevice::getAdvertising();
-        pAdvertising->addServiceUUID(pService->getUUID());
-        pAdvertising->start();
+        // Start Advertising
+        BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
+        pAdvertising->addServiceUUID(SERVICE_UUID);
+        pAdvertising->setScanResponse(true);
+        pAdvertising->setMinPreferred(0x06);
+        BLEDevice::startAdvertising();
+
+        logMessage("BLE Advertising started. Waiting for Web BLE connection...");
 
         bluetooth_is_init = true;
     }
 
-
     // Blocking loop to wait for credentials
     while (ssid.length() == 0 || password.length() == 0) 
     {
-        std::string value = pWiFiCharacteristic->getValue();
-        if (!value.empty())
+        String value = pWiFiCharacteristic->getValue();
+        if (value.length() > 0) 
         {
-            size_t separator = value.find("|");
-            if (separator != std::string::npos) 
+            int separator = value.indexOf("|");
+            if (separator != -1) 
             {
-                ssid = String(value.substr(0, separator).c_str());  // Convert std::string to String
-                password = String(value.substr(separator + 1).c_str());
-                logMessage("ssid: ", ssid, " | password: ", password);
-                break;  // Exit the loop once credentials are received
+                ssid = value.substring(0, separator);
+                password = value.substring(separator + 1);
+                logMessage("Received WiFi Credentials - SSID: ", ssid, " | PASSWORD: ", password);
+                break;
             }
         }
         delay(100);  // Prevents excessive CPU usage
@@ -400,14 +462,14 @@ void stop_bluetooth()
 
     if (pServer) {
         pServer->getAdvertising()->stop();  // Stop BLE advertising
-        pServer->removeService(pServer->getServiceByUUID("1234"));  // Remove service if exists
-        NimBLEDevice::deinit(true);  // Fully shut down NimBLE and free memory
+        BLEDevice::deinit();  // Fully shut down BLE
         pServer = nullptr;  // Reset pointer
         bluetooth_is_init = false;
     }
 
-    logMessage("Bluetooth Stopped and Memory Freed.");
+    logMessage("Bluetooth Stopped.");
 }
+
 
 void change_task(bool change_to_setup)
 {
@@ -455,8 +517,27 @@ void led_flicker(int interval, int times, int led)
     }
 }
 
+void MyServerCallbacks::onConnect(BLEServer* pServer) {
+    logMessage("BLE Device Connected");
+    led_flicker(100, 3, YELLOW_LED);
+}
 
+void MyServerCallbacks::onDisconnect(BLEServer* pServer) {
+    logMessage("BLE Device Disconnected. Restarting advertising...");
+    led_flicker(100, 3, YELLOW_LED);
+    pServer->startAdvertising();  // Restart advertising when disconnected
+}
 
+void read_battery()
+{
+    sensorData.battery = map(analogReadMilliVolts(BATTERY_PIN), MIN_BAT_VOLT, MAX_BAT_VOLT, 0, 100);
+    logMessage("Battery: ", sensorData.battery);
+}
+
+SensorData::SensorData()
+{
+    read_battery();
+}
 
 
 

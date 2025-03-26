@@ -14,7 +14,10 @@
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
-#include <NimBLEDevice.h>
+#include <BLEDevice.h>
+#include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
 
 // EEPROM settings
 #define EEPROM_SIZE 100
@@ -30,11 +33,20 @@
 #define READ_DATA_TASK 1
 #define SEND_DATA_TASK 2
 #define HANDLE_ALERT_TASK 3
+#define BUZZER_UPDATE 4
 
 #define BUZZER_PIN 33
 #define GREEN_LED 13
 #define YELLOW_LED 12
 #define RED_LED 27
+
+#define SERVICE_UUID "19b10000-e8f2-537e-4f6c-d104768a1214"
+#define WIFI_CHARACTERISTIC_UUID "19b10001-e8f2-537e-4f6c-d104768a1214"
+#define MAC_CHARACTERISTIC_UUID "19b10002-e8f2-537e-4f6c-d104768a1214"
+
+#define BATTERY_PIN 34
+#define MIN_BAT_VOLT 1500
+#define MAX_BAT_VOLT 3200
 
 //============================================================== DATA CLASS ==============================================================//
 class SensorData{
@@ -45,11 +57,18 @@ class SensorData{
     float minHumidity = -1000;
     float maxTemperature = 1000;
     float minTemperature = -1000;
+    int battery = 0;
     String timeStamp = "";
+
+    SensorData();
 };
 
 //============================================================== BLUETOOTH CLASS ==============================================================//
+class MyServerCallbacks : public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer);
 
+    void onDisconnect(BLEServer* pServer);
+};
 
 //============================================================== VARIABLE DECORATION ==============================================================//
 // Task related variables
@@ -96,10 +115,9 @@ extern bool enable_logging;
 extern bool is_setup_mode;
 
 // Bluetooth variables
-extern NimBLEServer* pServer;
-extern NimBLEService* pService;
-extern NimBLECharacteristic* pWiFiCharacteristic;
-extern NimBLEAdvertising* pAdvertising;
+extern BLEServer* pServer;
+extern BLECharacteristic* pWiFiCharacteristic;
+extern BLECharacteristic* pMacCharacteristic;
 extern bool bluetooth_is_init;
 
 
@@ -128,6 +146,8 @@ void start_taking_wifi_credentials_using_bluetooth();
 void stop_bluetooth();
 void change_task(bool change_to_setup);
 void led_flicker(int interval, int times, int led);
+void read_battery();
+String formatData(String timeStampe, float temperature, float humidity, int battery);
 
 
 //============================================================== TASK DECORATION ==============================================================//

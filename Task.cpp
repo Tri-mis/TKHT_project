@@ -1,3 +1,4 @@
+#include "esp32-hal-gpio.h"
 #include "HardwareSerial.h"
 #include "TKHT_lib.h"
 
@@ -8,7 +9,7 @@ void Hardware_Control(void *pvParameters)
     {
         button.changeLeverState(false);
 
-        if (button.hold_state_time > 3000 && button.hold_state_time < 10000)
+        if (button.hold_state_time > 3000 && button.hold_state_time < 5000)
         {  // Held > 3s
             is_setup_mode = !is_setup_mode; // Toggle mode
 
@@ -25,6 +26,19 @@ void Hardware_Control(void *pvParameters)
             }
             button.hold_state_time = 0;
         }
+        else if (button.hold_state_time > 5000 && button.hold_state_time < 10000)
+        {
+            if (buzzer_on)
+            {
+                buzzer_on = false;
+                digitalWrite(BUZZER_PIN, 0);
+                int taskType = BUZZER_UPDATE;
+                xQueueSend(taskQueue, &taskType, 0);
+                
+            }
+
+            button.hold_state_time = 0;
+        }
         else if(button.hold_state_time > 10000)
         {
             for (int i = 0; i < 512; i++) 
@@ -34,7 +48,10 @@ void Hardware_Control(void *pvParameters)
             
             EEPROM.commit();
             button.hold_state_time = 0;
-            Serial.println("Clear EEPORM");
+            logMessage("Clear EEPORM");
+            led_flicker(100, 3, RED_LED);
+
+            button.hold_state_time = 0;
         }
 
         vTaskDelay(10);
@@ -45,20 +62,20 @@ void Hardware_Control(void *pvParameters)
 void Setup_Task(void *pvParameters)
 {
     while (true)
-    {
+    { 
         if (load_wifi_credentials() && connect_to_wifi())
         {
             connect_to_firebase();
             get_config_data_from_firebase();
             disconnect_if_allowed();
             stop_bluetooth();
-            led_flicker(200, 3, GREEN_LED);
+            led_flicker(100, 3, GREEN_LED);
 
             change_task(false);
         }
         else
         {
-            led_flicker(200, 3, RED_LED);
+            led_flicker(100, 3, RED_LED);
             start_taking_wifi_credentials_using_bluetooth();
             save_wifi_credentials();
         }

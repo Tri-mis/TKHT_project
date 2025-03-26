@@ -38,6 +38,7 @@ void loop()
             case READ_DATA_TASK:
                 logMessage("\n==================== READ DATA TASK ====================");
                 read_sensor_data();
+                read_battery();
                 check_sensor_data_to_send_alert();
                 break;
 
@@ -46,13 +47,15 @@ void loop()
                 if (connect_to_wifi())
                 {
                     refresh_firebase_token();
-                    sensorData.timeStamp = get_formatted_time();
                     send_data_to_firebase();
                     disconnect_if_allowed();
+
+                    led_flicker(100, 3, GREEN_LED);
                 }
                 else 
                 {
                     logMessage("Unable to connect to WiFi -> abort sending data to firebase");
+                    led_flicker(100, 3, RED_LED);
                 }
                 break;
             
@@ -61,6 +64,7 @@ void loop()
                 if (alert_is_set)
                 {
                     logMessage("Alert!!!");
+                    digitalWrite(RED_LED, 1);
 
                     if (!alert_handeling_is_init)
                     {
@@ -78,10 +82,12 @@ void loop()
                             begin_data_streamming();// begin a new data stream
                             stream_is_on = true;
                             alert_handeling_is_init = true;
+                            led_flicker(100, 3, GREEN_LED);
                         }
                         else 
                         {
                             logMessage("Unable to connect to WiFi -> Alert is not sent to firebase!");
+                            led_flicker(100, 3, RED_LED);
                         }
                     }
 
@@ -89,6 +95,7 @@ void loop()
                 else
                 {
                     logMessage("No alert");
+                    digitalWrite(RED_LED, 0);
 
                     if (stream_is_on)
                     {
@@ -108,6 +115,10 @@ void loop()
                 }
                 
                 break;  
+
+            case BUZZER_UPDATE:
+                to_database("/actuator/buzzer", (void*) &buzzer_on);
+                break;
         }
     }
 }
