@@ -11,10 +11,11 @@ String ssid = "";
 String password = "";
 bool disconnect_allowed = true;
 bool user_want_to_change_wifi = false;
+bool do_an_do_luong = false;
 
 // Hardware related variables
 ArtronShop_SHT3x sht3x(0x44, &Wire);
-Button button(17, 50, true, false);
+Button button(BUTTON_PIN, 50, true, false);
 
 // Data related variables
 SensorData sensorData;

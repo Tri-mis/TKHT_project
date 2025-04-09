@@ -3,6 +3,7 @@
 void setup()
 {
     Serial.begin(115200);
+    WiFi.mode(WIFI_MODE_STA);
 
     pinMode(BUZZER_PIN, OUTPUT);
     pinMode(RED_LED, OUTPUT);
@@ -16,6 +17,7 @@ void setup()
         delay(1000);
     }
 
+    delay(1000);
     taskQueue = xQueueCreate(100, sizeof(int));
     EEPROM.begin(EEPROM_SIZE); // Initialize EEPROM
     
@@ -76,7 +78,7 @@ void loop()
                         if (connect_to_wifi())
                         {
                             refresh_firebase_token();
-                            sensorData.timeStamp = get_formatted_time();
+                            get_formatted_time();
                             send_data_to_firebase();
                             to_database("/actuator/buzzer", (void*) &buzzer_on);
                             begin_data_streamming();// begin a new data stream
@@ -105,6 +107,9 @@ void loop()
                         digitalWrite(BUZZER_PIN, buzzer_on);
                         to_database("/actuator/buzzer", (void*) &buzzer_on);
                         stream_is_on = false;
+
+                        int taskType = SEND_DATA_TASK;
+                        xQueueSend(taskQueue, &taskType, 0);
                     }
 
                     alert_handeling_is_init = false;

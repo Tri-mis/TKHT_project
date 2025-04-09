@@ -39,7 +39,7 @@ void Hardware_Control(void *pvParameters)
 
             button.hold_state_time = 0;
         }
-        else if(button.hold_state_time > 10000)
+        else if(button.hold_state_time > 10000 && button.hold_state_time < 15000)
         {
             for (int i = 0; i < 512; i++) 
             {
@@ -51,6 +51,18 @@ void Hardware_Control(void *pvParameters)
             logMessage("Clear EEPORM");
             led_flicker(100, 3, RED_LED);
 
+            button.hold_state_time = 0;
+        }
+        else if(button.hold_state_time > 15000 && button.hold_state_time < 20000)
+        {
+            int taskType = SEND_DATA_TASK;
+            xQueueSend(taskQueue, &taskType, 0);
+            button.hold_state_time = 0;
+        }
+        else if(button.hold_state_time > 20000)
+        {
+            do_an_do_luong = !do_an_do_luong;
+            led_flicker(100, 10, YELLOW_LED);
             button.hold_state_time = 0;
         }
 

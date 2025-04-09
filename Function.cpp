@@ -170,7 +170,7 @@ void to_database(const String &folder, void *data)
         else if(folder == "/device_data")
         {
             String *device_data = static_cast<String *>(data);
-            success = Firebase.RTDB.pushString(&fbdo, path + folder, *device_data);
+            success = Firebase.RTDB.setString(&fbdo, path + folder + + "/" + String(sensorData.timeStamp), *device_data);
         }
         else 
         {
@@ -216,31 +216,27 @@ bool from_database()
     }
 }
 
-String get_formatted_time()
+void get_formatted_time()
 {
     configTime(25200, 3600, "pool.ntp.org");
 
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) 
     {
-        return "Failed to obtain time";
+        logMessage("Failed to obtain time");
     }
 
-    char timeStr[20]; // Buffer for formatted time
-    strftime(timeStr, sizeof(timeStr), "%d-%m-%Y-%H-%M-%S", &timeinfo);
+    sensorData.timeStamp = mktime(&timeinfo);
 
-    return String(timeStr);
+    // char timeStr[20]; // Buffer for formatted time
+    // strftime(timeStr, sizeof(timeStr), "%d-%m-%Y-%H-%M-%S", &timeinfo);
+
+    // return String(timeStr);
 }
 
-String formatData(String timeStampe, float temperature, float humidity, int battery) {
-    // Extract day, month, hour, and minute from timeStampe
-    String day = timeStampe.substring(0, 2);
-    String month = timeStampe.substring(3, 5);
-    String hour = timeStampe.substring(11, 13);
-    String minute = timeStampe.substring(14, 16);
+String formatData(float temperature, float humidity, int battery) {
 
-    // Format the output string
-    String result = day + "/" + month + "|" + hour + ":" + minute + "|";
+    String result;
     result += String(temperature, 2) + "|";
     result += String(humidity, 2) + "|";
     result += String(battery);
@@ -250,12 +246,12 @@ String formatData(String timeStampe, float temperature, float humidity, int batt
 
 void send_data_to_firebase()
 {
-    sensorData.timeStamp = get_formatted_time();
+    get_formatted_time();
 
     if (alert_is_set) logMessage("Alert update!!!");
     else logMessage("Normal update");
 
-    String data_to_sent = formatData(sensorData.timeStamp, sensorData.temperature, sensorData.humidity, sensorData.battery);
+    String data_to_sent = formatData(sensorData.temperature, sensorData.humidity, sensorData.battery);
 
     // to_database("/data/temp", (void*) &sensorData.temperature);
     // to_database("/data/humid", (void*) &sensorData.humidity);
@@ -271,7 +267,7 @@ void disconnect_if_allowed()
 {
     if (WiFi.status() == WL_CONNECTED)
     {
-        if (disconnect_allowed)
+        if (disconnect_allowed && !do_an_do_luong)
         {
             WiFi.disconnect();
             fbdo.clear();
@@ -280,6 +276,8 @@ void disconnect_if_allowed()
         else
         {
             logMessage("Disconnection to wifi and firebase is NOT allowed -> keeping connection alive");
+            if (do_an_do_luong)
+            logMessage("Dang lam do an do luong");
         }
     }
 }
@@ -418,6 +416,7 @@ void start_taking_wifi_credentials_using_bluetooth()
         // Get WiFi MAC Address instead of Bluetooth MAC
         String macStr = WiFi.macAddress();
         pMacCharacteristic->setValue(macStr.c_str());
+        logMessage("Mac address is: ", macStr.c_str());
 
         // Start the service
         pService->start();

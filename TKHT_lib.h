@@ -45,8 +45,10 @@
 #define MAC_CHARACTERISTIC_UUID "19b10002-e8f2-537e-4f6c-d104768a1214"
 
 #define BATTERY_PIN 34
-#define MIN_BAT_VOLT 1500
-#define MAX_BAT_VOLT 3200
+#define MIN_BAT_VOLT 1680
+#define MAX_BAT_VOLT 2350
+
+#define BUTTON_PIN 17
 
 //============================================================== DATA CLASS ==============================================================//
 class SensorData{
@@ -58,7 +60,7 @@ class SensorData{
     float maxTemperature = 1000;
     float minTemperature = -1000;
     int battery = 0;
-    String timeStamp = "";
+    long timeStamp = 0;
 
     SensorData();
 };
@@ -82,6 +84,7 @@ extern String ssid;
 extern String password;
 extern bool disconnect_allowed;
 extern bool user_want_to_change_wifi;
+extern bool do_an_do_luong;
 
 // Hardware related variables
 extern ArtronShop_SHT3x sht3x;
@@ -132,7 +135,7 @@ void refresh_firebase_token();
 void get_config_data_from_firebase();
 bool from_database();
 void to_database(const String &folder, void *data);
-String get_formatted_time();
+void get_formatted_time();
 void send_data_to_firebase();
 void disconnect_if_allowed();
 void read_sensor_data();
